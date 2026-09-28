@@ -1,0 +1,13 @@
+model IdempotencyKey {
+  key            String   @id
+  requestHash    String
+  status         String
+  responseStatus Int?
+  responseBody   Json?
+  lockedAt       DateTime
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}

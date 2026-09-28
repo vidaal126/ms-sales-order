@@ -1,0 +1,48 @@
+// Replicas locais (so leitura para o dominio), alimentadas pelos consumers.
+// source* = evento que gerou a versao gravada (guard contra reordenacao).
+
+model ItemReplica {
+  itemId           String   @id
+  sku              String
+  name             String
+  unitPrice        Decimal  @db.Decimal(10, 2)
+  sourceEventId    String
+  sourceOccurredAt DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("items_replica")
+}
+
+model CustomerReplica {
+  customerId                 String   @id
+  name                       String
+  authorizedTransportTypeIds String[]
+  sourceEventId              String
+  sourceOccurredAt           DateTime
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@map("customers_replica")
+}
+
+model TransportTypeReplica {
+  transportTypeId  String   @id
+  name             String
+  active           Boolean
+  sourceEventId    String
+  sourceOccurredAt DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("transport_types_replica")
+}
+
+// Idempotencia dos consumers: eventId ja visto = duplicata.
+model ProcessedEvent {
+  eventId     String   @id
+  eventType   String
+  processedAt DateTime @default(now())
+
+  @@map("processed_events")
+}

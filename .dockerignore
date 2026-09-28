@@ -1,0 +1,16 @@
+node_modules
+dist
+.git
+.env
+.env.*
+!.env.example
+*.log
+coverage
+*.md
+test
+**/*.spec.ts
+**/*-spec.ts
+src/test
+src/infrastructure/database/generated
+Dockerfile
+.dockerignore

@@ -1,0 +1,51 @@
+// Pedido: dono deste servico. Id gerado no dominio. version = controle
+// otimista de concorrencia (cada save incrementa).
+model SalesOrder {
+  id              String           @id
+  customerId      String
+  transportTypeId String
+  status          String
+  notes           String?
+  version         Int
+  createdAt       DateTime
+  updatedAt       DateTime
+  items           SalesOrderItem[]
+  scheduling      Scheduling?
+
+  @@index([customerId])
+  @@index([transportTypeId])
+  @@index([status])
+  @@index([createdAt, id])
+  @@map("sales_orders")
+}
+
+// Linha do pedido: unitPrice congelado na criacao (replica do catalogo).
+model SalesOrderItem {
+  id           String     @id
+  salesOrderId String
+  itemId       String
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([salesOrderId, itemId])
+  @@index([itemId])
+  @@map("sales_order_items")
+}
+
+// Agendamento 1:1 com o pedido. deliveryDate e so data; janela em timestamptz.
+model Scheduling {
+  id            String     @id
+  salesOrderId  String     @unique
+  deliveryDate  DateTime   @db.Date
+  windowStart   DateTime   @db.Timestamptz(3)
+  windowEnd     DateTime   @db.Timestamptz(3)
+  confirmedAt   DateTime
+  rescheduledAt DateTime?
+  createdAt     DateTime
+  updatedAt     DateTime
+  salesOrder    SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryDate])
+  @@map("scheduling")
+}

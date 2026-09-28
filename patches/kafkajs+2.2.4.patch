@@ -1,0 +1,13 @@
+diff --git a/node_modules/kafkajs/src/network/requestQueue/index.js b/node_modules/kafkajs/src/network/requestQueue/index.js
+index eee14d6..a13f1cd 100644
+--- a/node_modules/kafkajs/src/network/requestQueue/index.js
++++ b/node_modules/kafkajs/src/network/requestQueue/index.js
+@@ -317,7 +317,7 @@ module.exports = class RequestQueue extends EventEmitter {
+       this.throttleCheckTimeoutId = setTimeout(() => {
+         this.throttleCheckTimeoutId = null
+         this.checkPendingRequests()
+-      }, scheduleAt)
++      }, Math.max(scheduleAt, 0))
+     }
+   }
+ }

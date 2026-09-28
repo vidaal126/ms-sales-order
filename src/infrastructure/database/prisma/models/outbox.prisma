@@ -1,0 +1,15 @@
+// Transactional Outbox: eventos gravados na mesma transacao do pedido e
+// publicados pelo OutboxPublisherService. id = eventId do envelope.
+model OutboxEvent {
+  id            String    @id @default(uuid())
+  aggregateId   String
+  eventType     String
+  schemaVersion Int
+  correlationId String
+  payload       Json
+  createdAt     DateTime  @default(now())
+  publishedAt   DateTime?
+
+  @@index([publishedAt, createdAt])
+  @@map("outbox_events")
+}
