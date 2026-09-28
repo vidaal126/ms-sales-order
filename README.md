@@ -1,5 +1,7 @@
 # ms-sales-order
 
+> Plataforma: [ms-platform](https://github.com/vidaal126/ms-platform#readme) · [ms-gateway](https://github.com/vidaal126/ms-gateway#readme) · [ms-auth](https://github.com/vidaal126/ms-auth#readme) · [ms-catalog](https://github.com/vidaal126/ms-catalog#readme) · [ms-transport](https://github.com/vidaal126/ms-transport#readme) · [ms-customer](https://github.com/vidaal126/ms-customer#readme) · **ms-sales-order**
+
 Microsserviço de ordem de venda (NestJS, Prisma, PostgreSQL, Kafka). É o núcleo
 extraído do monolito `sales-order-api`: pedido, linhas e agendamento de
 entrega.
@@ -175,7 +177,7 @@ para AGENDADA).
 
 ## Como subir
 
-Com a infraestrutura do [ms-platform](../ms-platform/README.md) no ar:
+Com a infraestrutura do [ms-platform](https://github.com/vidaal126/ms-platform#readme) no ar:
 
 ```bash
 cp .env.example .env
@@ -203,7 +205,7 @@ problemas. Veja `.env.example`.
 | `CONSUMER_PAUSE_MS` | 30000 | pausa da partição depois de esgotar o retry |
 | `OUTBOX_POLL_INTERVAL_MS` / `OUTBOX_BATCH_SIZE` | 2000 / 20 | publisher do outbox |
 | `IDEMPOTENCY_TTL_HOURS` / `_LOCK_TIMEOUT_MS` / `_CLEANUP_INTERVAL_MS` | 24 / 30000 / 3600000 | Idempotency-Key |
-| `THROTTLE_DEFAULT_TTL_MS` / `_LIMIT` | 60000 / 100 | rate limit por IP |
+| `THROTTLE_DEFAULT_TTL_MS` / `_LIMIT` | 60000 / 100 | rate limit por cliente (IP repassado pelo gateway) |
 | `PORT` | 3004 | porta HTTP |
 
 ## API HTTP
@@ -304,6 +306,9 @@ o app subir e verifica:
 
 ## Limitações conhecidas
 
+- **Ordem por agregado no outbox**: os eventos saem na ordem de gravação
+  (`sequence`). Se o envio de um evento falha, os seguintes do mesmo
+  agregado esperam o próximo ciclo; os de outros agregados seguem.
 - **Consistência eventual das réplicas.** Um cadastro recente em outro serviço
   pode dar 422 por alguns instantes.
 - **Sem atualização de preço.** O catálogo não publica `ItemUpdated`: preço e
@@ -317,8 +322,12 @@ o app subir e verifica:
   um erro permanente mantém a partição em ciclos de pausa e retomada, com o
   readiness `down`.
 - **Várias réplicas do serviço.** O outbox não usa `SKIP LOCKED` (publicação
-  duplicada, segura para consumidores idempotentes), e o rate limit fica em
-  memória.
+  duplicada, segura para consumidores idempotentes).
+- **Rate limit em memória, por réplica.** O `trust proxy` confia em
+  exatamente 1 salto (o ms-gateway, que anexa o IP do cliente ao
+  `X-Forwarded-For`), então o limite conta por cliente e não pelo IP do
+  gateway. Acessar o serviço direto, sem o gateway, permite escolher o IP
+  contado via `X-Forwarded-For`.
 - **Sem autenticação no serviço.** Identidade e autorização vêm do
-  [ms-gateway](../ms-gateway/README.md) (`x-user-*`), e o serviço confia na
+  [ms-gateway](https://github.com/vidaal126/ms-gateway#readme) (`x-user-*`), e o serviço confia na
   rede interna.
