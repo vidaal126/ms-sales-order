@@ -9,8 +9,8 @@ import { KAFKA_CLIENT } from "./kafka.tokens";
 
 // Modulo autocontido (config Kafka, client, producer, base de consumer,
 // DLT, envelope e health), copia do mesmo modulo do ms-catalog. Depende apenas de @common
-// e das variaveis KAFKA_BROKER, KAFKA_CLIENT_ID e HEALTH_CHECK_TIMEOUT_MS do
-// servico.
+// e das variaveis KAFKA_BROKER, KAFKA_CLIENT_ID, KAFKA_SEND_TIMEOUT_MS e
+// HEALTH_CHECK_TIMEOUT_MS do servico.
 @Module({
   imports: [TerminusModule],
   providers: [

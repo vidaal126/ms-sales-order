@@ -197,6 +197,7 @@ problemas. Veja `.env.example`.
 |---|---|---|
 | `DATABASE_URL` | obrigatória | database `sales_order` |
 | `KAFKA_BROKER` | obrigatória | `host:porta`, separados por vírgula |
+| `KAFKA_SEND_TIMEOUT_MS` | 5000 | teto de cada envio ao Kafka (outbox e DLT); estourado, conta como falha de envio |
 | `CATALOG_ITEM_SYNC_GROUP_ID` / `CUSTOMER_SYNC_GROUP_ID` / `TRANSPORT_TYPE_SYNC_GROUP_ID` | `ms-sales-order.*-sync` | groups das réplicas |
 | `CONSUMER_RETRY_RETRIES` / `_INITIAL_MS` / `_MAX_MS` | 5 / 300 / 30000 | retry de erro recuperável |
 | `CONSUMER_PAUSE_MS` | 30000 | pausa da partição depois de esgotar o retry |

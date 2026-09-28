@@ -4,10 +4,16 @@ import {
   type OnApplicationShutdown,
   type OnModuleInit,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { type Kafka, Partitioners, type Producer } from "kafkajs";
 import { type ILogger, LOGGER_TOKEN } from "@common/logger/logger.interface";
+import { withTimeout } from "@common/with-timeout";
 import type { OutboundMessage } from "./event-envelope";
 import { KAFKA_CLIENT } from "./kafka.tokens";
+
+interface ProducerEnv {
+  KAFKA_SEND_TIMEOUT_MS: number;
+}
 
 @Injectable()
 export class KafkaProducerService
@@ -16,11 +22,14 @@ export class KafkaProducerService
   private readonly producer: Producer;
   private isConnected = false;
   private connecting: Promise<void> | null = null;
+  private readonly sendTimeoutMs: number;
 
   constructor(
     @Inject(KAFKA_CLIENT) kafka: Kafka,
     @Inject(LOGGER_TOKEN) private readonly logger: ILogger,
+    config: ConfigService<ProducerEnv, true>,
   ) {
+    this.sendTimeoutMs = config.get("KAFKA_SEND_TIMEOUT_MS", { infer: true });
     this.producer = kafka.producer({
       idempotent: true,
       // O producer idempotente exige retries ilimitados - qualquer teto invalida
@@ -55,7 +64,19 @@ export class KafkaProducerService
     await this.producer.disconnect();
   }
 
+  // Com retries ilimitados o envio nunca desiste sozinho: o teto transforma
+  // broker indisponivel em falha (TimeoutError) para quem chama. O outbox
+  // tenta de novo no proximo ciclo; a DLT nao commita o offset. O envio
+  // abandonado pode ainda chegar ao broker (at-least-once; o eventId e estavel).
   async send(message: OutboundMessage): Promise<void> {
+    await withTimeout(
+      this.connectAndSend(message),
+      this.sendTimeoutMs,
+      `Kafka send timeout apos ${this.sendTimeoutMs}ms (topic ${message.topic})`,
+    );
+  }
+
+  private async connectAndSend(message: OutboundMessage): Promise<void> {
     await this.connect();
 
     this.logger.log(

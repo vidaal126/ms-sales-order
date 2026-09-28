@@ -19,6 +19,9 @@ export const envSchema = z.object({
     .transform((value) => value.split(",").map((broker) => broker.trim()))
     .pipe(z.array(z.string().regex(/^[^\s:]+:\d+$/, "formato host:porta")).min(1)),
   KAFKA_CLIENT_ID: z.string().min(1).default("ms-sales-order"),
+  // Teto de cada envio do producer (conexao + ack). O producer idempotente
+  // tem retries ilimitados; sem teto um envio travaria o outbox e a DLT.
+  KAFKA_SEND_TIMEOUT_MS: positiveInt.default(5_000),
 
   // Groups fixos das replicas. Sobrescrever so para replay com um group
   // temporario (fixo por execucao, nunca aleatorio).
