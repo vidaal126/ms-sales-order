@@ -9,7 +9,9 @@ export class OutboxRepository {
   async findPending(limit: number): Promise<OutboxEvent[]> {
     return this.prisma.outboxEvent.findMany({
       where: { publishedAt: null },
-      orderBy: { createdAt: "asc" },
+      // sequence, e nao createdAt: eventos da mesma transacao tem o mesmo
+      // createdAt e a ordem entre eles ficaria indefinida.
+      orderBy: { sequence: "asc" },
       take: limit,
     });
   }

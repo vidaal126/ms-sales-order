@@ -1,7 +1,10 @@
 // Transactional Outbox: eventos gravados na mesma transacao do pedido e
 // publicados pelo OutboxPublisherService. id = eventId do envelope.
+// sequence: ordem total de gravacao. createdAt nao serve, pois eventos da
+// mesma transacao compartilham o mesmo now().
 model OutboxEvent {
   id            String    @id @default(uuid())
+  sequence      BigInt    @unique @default(autoincrement())
   aggregateId   String
   eventType     String
   schemaVersion Int
@@ -10,6 +13,6 @@ model OutboxEvent {
   createdAt     DateTime  @default(now())
   publishedAt   DateTime?
 
-  @@index([publishedAt, createdAt])
+  @@index([publishedAt, sequence])
   @@map("outbox_events")
 }
