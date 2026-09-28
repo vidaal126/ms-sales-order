@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import type { INestApplication } from "@nestjs/common";
+import type { ConfigService } from "@nestjs/config";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { KafkaContainer, type StartedKafkaContainer } from "@testcontainers/kafka";
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { z } from "zod";
+import type { Env } from "@config/env";
 import type { PrismaService } from "@infrastructure/database/prisma/prisma.service";
 import { sampleValue } from "../../src/test/metrics.helpers";
 import { KafkaTestClient, type ProducedMessage, waitFor } from "./kafka-test-client";
@@ -61,7 +63,7 @@ describe("ms-sales-order: replicas, pedidos e eventos (integracao)", () => {
   let postgres: StartedPostgreSqlContainer;
   let kafkaContainer: StartedKafkaContainer;
   let kafka: KafkaTestClient;
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let baseUrl: string;
 
@@ -130,7 +132,7 @@ describe("ms-sales-order: replicas, pedidos e eventos (integracao)", () => {
     const { AppModule } = await import("../../src/app.module");
     const { configureApp } = await import("../../src/app.setup");
     const { PrismaService: PrismaToken } = await import("@infrastructure/database/prisma/prisma.service");
-    app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
+    app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false, abortOnError: false });
     configureApp(app);
     await app.listen(0);
     baseUrl = (await app.getUrl()).replace("[::1]", "localhost");
@@ -282,5 +284,20 @@ describe("ms-sales-order: replicas, pedidos e eventos (integracao)", () => {
 
   it("health ready com os tres consumers rodando", async () => {
     expect((await call("GET", "/health/ready")).status).toBe(200);
+  });
+
+  // Roda por ultimo: esgota o balde de uma rota para um cliente.
+  it("throttler conta por cliente (X-Forwarded-For do gateway), nao pelo proxy", async () => {
+    const { ConfigService: ConfigToken } = await import("@nestjs/config");
+    const limit = app.get<ConfigService<Env, true>>(ConfigToken).get("THROTTLE_DEFAULT_LIMIT", { infer: true });
+    const missingOrder = randomUUID();
+    const getFrom = async (clientIp: string): Promise<number> =>
+      (await call("GET", `/sales-orders/${missingOrder}`, undefined, { "x-forwarded-for": clientIp })).status;
+
+    for (let attempt = 0; attempt < limit; attempt++) {
+      expect(await getFrom("203.0.113.10")).toBe(404);
+    }
+    expect(await getFrom("203.0.113.10")).toBe(429);
+    expect(await getFrom("203.0.113.20")).toBe(404);
   });
 });

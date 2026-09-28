@@ -1,6 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
 import { type Env, readEnv } from "@config/env";
 import { AppModule } from "./app.module";
@@ -13,7 +14,7 @@ const SHUTDOWN_SIGNALS: readonly NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
 async function bootstrap(): Promise<void> {
   // abortOnError: false - erro de inicializacao (ex.: env invalida) sobe para
   // o catch de bootstrap, que imprime a mensagem e sai com codigo 1.
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     abortOnError: false,
   });
